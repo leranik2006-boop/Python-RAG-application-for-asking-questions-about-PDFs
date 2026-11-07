@@ -1,7 +1,5 @@
-
 from pathlib import Path
 import sys
-
 import chromadb
 import requests
 import streamlit as st
@@ -16,6 +14,9 @@ from rag.core import (
     collect_chunks,
     search,
 )
+@st.cache_resource
+def load_embedder():
+    return get_embedder()
 
 DB_PATH = str(ROOT / "chroma_db")
 PDF_DIR = ROOT / "sample_pdfs"

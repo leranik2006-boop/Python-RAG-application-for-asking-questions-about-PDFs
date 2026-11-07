@@ -19,7 +19,7 @@ def get_embedder():
 
 
 def split_text(text: str, chunk_size: int = 700, overlap: int = 120):
-    """Chunk by character with overlap, preferably ending at whitespace."""
+    """Split text into overlapping chunks."""
     text = " ".join(text.split())
     if not text:
         return []
