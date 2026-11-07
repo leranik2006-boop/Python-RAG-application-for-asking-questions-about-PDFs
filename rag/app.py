@@ -6,7 +6,7 @@ import chromadb
 import requests
 import streamlit as st
 
-# Allow imports from the project root
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
@@ -30,9 +30,46 @@ st.set_page_config(
 st.title("📚 Ask Your PDFs")
 st.write("Your AI-powered PDF assistant")
 
+
 @st.cache_resource
-def load_embedder():
-    return get_embedder()
+def initialize_database():
+    collection = get_collection(DB_PATH)
+
+    if collection.count() > 0:
+        return collection.count()
+
+    PDF_DIR.mkdir(parents=True, exist_ok=True)
+
+    ids, documents, metadatas = collect_chunks(PDF_DIR)
+
+    if not documents:
+        return 0
+
+    model = load_embedder()
+
+    vectors = model.encode(
+        documents,
+        normalize_embeddings=True
+    ).tolist()
+
+    collection.upsert(
+        ids=ids,
+        documents=documents,
+        metadatas=metadatas,
+        embeddings=vectors,
+    )
+
+    return collection.count()
+
+
+with st.spinner("Preparing your PDF knowledge base..."):
+    indexed_count = initialize_database()
+
+if indexed_count:
+    st.success(f"Knowledge base ready: {indexed_count} chunks")
+else:
+    st.warning("No indexed PDFs yet. Upload and process a PDF.")
+
 
 st.divider()
 
