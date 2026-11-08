@@ -172,8 +172,20 @@ Question:
 Answer:
 """
 
+                    
+                    import os
+
+                    token = os.environ.get("OLLAMA_PROXY_TOKEN")
+
+                    if not token:
+                        st.error("Ollama proxy token is missing.")
+                        st.stop()
+
                     response = requests.post(
-                        "http://localhost:11434/api/generate",
+                        "http://127.0.0.1:8000/generate",
+                        headers={
+                            "Authorization": f"Bearer {token}",
+                        },
                         json={
                             "model": OLLAMA_MODEL,
                             "prompt": prompt,
@@ -181,6 +193,7 @@ Answer:
                         },
                         timeout=180,
                     )
+
 
                     response.raise_for_status()
 

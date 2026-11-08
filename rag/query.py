@@ -9,25 +9,52 @@ from rag.core import search
 FALLBACK = "I don't know based on the provided documents."
 
 
+
 def ask_ollama(question, hits, model, url):
     context = "\n\n".join(
-        f"SOURCE [{h['filename']}, p. {h['page']}]\n{h['text']}" for h in hits
+        f"SOURCE [{h['filename']}, p. {h['page']}]\n{h['text']}"
+        for h in hits
     )
+
     system = (
-        "You are a document question-answering assistant. Use ONLY the supplied excerpts. "
-        "If the excerpts do not answer the question, reply exactly: " + FALLBACK + " "
-        "Cite factual claims using the provided exact format [filename.pdf, p. N]. "
-        "Never invent a citation, source, page, or unsupported fact."
+        "You are a document question-answering assistant. "
+        "Use ONLY the supplied excerpts. "
+        "If the excerpts do not answer the question, reply exactly: "
+        + FALLBACK + " "
+        "Cite factual claims using [filename.pdf, p. N]. "
+        "Never invent citations or unsupported facts."
     )
-    payload = {"model": model, "stream": False, "messages": [
-        {"role": "system", "content": system},
-        {"role": "user", "content": f"Excerpts:\n{context}\n\nQuestion: {question}"}
-    ], "options": {"temperature": 0}}
-    request = Request(url.rstrip("/") + "/api/chat", data=json.dumps(payload).encode(),
-                      headers={"Content-Type": "application/json"}, method="POST")
+
+    prompt = (
+        f"{system}\n\n"
+        f"Excerpts:\n{context}\n\n"
+        f"Question: {question}\n\nAnswer:"
+    )
+
+    token = os.environ.get("OLLAMA_PROXY_TOKEN")
+    if not token:
+        raise RuntimeError("OLLAMA_PROXY_TOKEN is not configured")
+
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False,
+    }
+
+    request = Request(
+        url.rstrip("/") + "/generate",
+        data=json.dumps(payload).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+        method="POST",
+    )
+
     with urlopen(request, timeout=180) as response:
         data = json.load(response)
-    return data["message"]["content"].strip()
+
+    return data.get("response", "").strip()
 
 
 def main():
@@ -36,7 +63,7 @@ def main():
     parser.add_argument("--db", default="chroma_db")
     parser.add_argument("--top-k", type=int, default=4)
     parser.add_argument("--model", default=os.getenv("OLLAMA_MODEL", "llama3.2:3b"))
-    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_URL", "http://localhost:11434"))
+    parser.add_argument("--ollama-url", default=os.getenv("OLLAMA_URL", "http://127.0.0.1:8000"))
     parser.add_argument("--show-sources", action="store_true", help="Print retrieved excerpts")
     args = parser.parse_args()
     if args.top_k < 1:
