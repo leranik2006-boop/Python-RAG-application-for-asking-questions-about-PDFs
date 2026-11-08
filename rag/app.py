@@ -1,5 +1,6 @@
 from pathlib import Path
 import sys
+import os
 import chromadb
 import requests
 import streamlit as st
@@ -173,30 +174,26 @@ Answer:
 """
 
                     
-                    import os
+                    proxy_url = st.secrets["OLLAMA_PROXY_URL"].rstrip("/")
+                    proxy_token = st.secrets["OLLAMA_PROXY_TOKEN"]
 
-                    token = os.environ.get("OLLAMA_PROXY_TOKEN")
-
-                    if not token:
-                        st.error("Ollama proxy token is missing.")
-                        st.stop()
+                    proxy_url = st.secrets["OLLAMA_PROXY_URL"].rstrip("/")
+                    proxy_token = st.secrets["OLLAMA_PROXY_TOKEN"]
 
                     response = requests.post(
-                        "http://127.0.0.1:8000/generate",
-                        headers={
-                            "Authorization": f"Bearer {token}",
+                       f"{proxy_url}/generate",
+                       headers={
+                           "Authorization": f"Bearer {proxy_token}",
                         },
                         json={
-                            "model": OLLAMA_MODEL,
-                            "prompt": prompt,
-                            "stream": False,
-                        },
-                        timeout=180,
+                           "model": OLLAMA_MODEL,
+                           "prompt": prompt,
+                           "stream": False,
+                         },
+                         timeout=180,
                     )
 
-
                     response.raise_for_status()
-
                     answer = response.json()["response"]
 
                     st.subheader("🤖 AI Answer")
